@@ -10,7 +10,8 @@ import com.credintel.jwt.JwtTokenValidator;
 import com.credintel.jwt.TokenInfo;
 import com.credintel.jwt.TokenType;
 import io.jsonwebtoken.JwtException;
-import org.apache.hc.client5.http.auth.InvalidCredentialsException;
+import com.credintel.auth_service.config.exception.AuthException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,27 +71,17 @@ public class AuthService {
 
         User user = userRepository
                 .findByEmailIgnoreCase(email)
-                .orElseThrow(() ->
-                        new InvalidCredentialsException(
-                                "Invalid email or password"
-                        ));
+                .orElseThrow(AuthException::invalidCredentials);
 
         if (!passwordEncoder.matches(
                 request.getPassword(),
                 user.getPasswordHash())) {
 
-            throw new InvalidCredentialsException(
-                    "Invalid email or password"
-            );
+            throw AuthException.invalidCredentials();
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new Exception(
-                    "User account is not active"
-            );
-            /*throw new UserInactiveException(
-                    "User account is not active"
-            );*/
+            throw new AuthException(HttpStatus.FORBIDDEN, "User account is not active");
         }
 
         return user;
@@ -105,28 +96,19 @@ public class AuthService {
                     jwtTokenValidator.getTokenInfo(refreshToken);
 
         } catch (JwtException | IllegalArgumentException ex) {
-            throw new Exception(
-                    "Invalid refresh token"
-            );
+            throw new AuthException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
         }
 
         if (tokenInfo.getTokenType() != TokenType.REFRESH) {
-            throw new Exception(
-                    "Token is not a refresh token"
-            );
+            throw new AuthException(HttpStatus.UNAUTHORIZED, "Token is not a refresh token");
         }
 
         User user = userRepository
                 .findById(tokenInfo.getUserId())
-                .orElseThrow(() ->
-                        new Exception(
-                                "Invalid refresh token"
-                        ));
+                .orElseThrow(() -> new AuthException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new Exception(
-                    "User account is not active"
-            );
+            throw new AuthException(HttpStatus.FORBIDDEN, "User account is not active");
         }
 
         return jwtTokenGenerator.generateAccessToken(

@@ -1,37 +1,24 @@
 package com.credintel.auth_service.config;
 
-import com.credintel.request.ApiPatternConstants;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.servlet.ServletRegistrationBean;
+import org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.DispatcherServlet;
 
-import java.util.List;
-
 @Configuration
 public class ServletConfig {
 
-    @Autowired
-    DispatcherServlet dispatcherServlet;
-
-    @Bean
-    public ServletRegistrationBean<DispatcherServlet> servicesDispatcherServlet(){
-        ServletRegistrationBean<DispatcherServlet> registrationBean = new ServletRegistrationBean<>(dispatcherServlet);
-        registrationBean.setUrlMappings(List.of(ApiPatternConstants.SERVICES));
-        registrationBean.setName("AUTH-SERVICES");
-        registrationBean.setLoadOnStartup(1);
-        return registrationBean;
-    }
-
-    @Bean
-    public ServletRegistrationBean<DispatcherServlet> ApiDispatcherServlet(){
-        ServletRegistrationBean<DispatcherServlet> registrationBean = new ServletRegistrationBean<>(dispatcherServlet);
-        registrationBean.setUrlMappings(List.of(ApiPatternConstants.API, ApiPatternConstants.API_PATTERN));
+    /**
+     * The ONLY mapping of the DispatcherServlet: /api/v1 (e.g. /auth-service/api/v1/auth/login).
+     * The bean name replaces Spring Boot's default "/" registration; previously every endpoint was
+     * also reachable at "/", "/api/v1/services/*", which made gateway rules easy to bypass.
+     */
+    @Bean(name = "dispatcherServletRegistration")
+    public DispatcherServletRegistrationBean apiDispatcherServlet(DispatcherServlet dispatcherServlet) {
+        DispatcherServletRegistrationBean registrationBean =
+                new DispatcherServletRegistrationBean(dispatcherServlet, "/api/v1");
         registrationBean.setName("AUTH-API");
         registrationBean.setLoadOnStartup(1);
         return registrationBean;
     }
-
-
 }
