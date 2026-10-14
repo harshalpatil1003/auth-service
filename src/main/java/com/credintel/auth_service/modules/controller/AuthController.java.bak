@@ -1,0 +1,292 @@
+package com.credintel.auth_service.modules.controller;
+
+import com.credintel.auth_service.config.util.TokenUtil;
+import com.credintel.auth_service.modules.dto.*;
+import com.credintel.auth_service.modules.services.AuthService;
+import com.credintel.auth_service.modules.services.UserService;
+import com.credintel.common.RoleDTO;
+import com.credintel.common.UserDTO;
+import com.credintel.jwt.TokenInfo;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * Authentication and Authorization Controller
+ * Provides endpoints for API Gateway and microservices integration
+ */
+//@CrossOrigin(origins = "*", allowedHeaders = "*")
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+    @Autowired
+    AuthService authService;
+
+    @Autowired
+    TokenUtil tokenUtil;
+
+    @Autowired
+    UserService userService;
+
+    /**
+     * Login endpoint - generates access and refresh tokens
+     */
+    @PostMapping("/login")
+    public ResponseEntity<JwtAuthResponse> login(@RequestBody LoginRequest loginRequest) throws Exception {
+        JwtAuthResponse response = authService.validateLoginRequest(loginRequest);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/register")
+    public UserDTO registerUser(@RequestBody CreateUserRequest createUserRequest) throws Exception {
+        // TODO: Implement user registration
+        return userService.createUser(createUserRequest);
+    }
+
+    /**
+     * Refresh token endpoint - generates new access token using refresh token
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<JwtAuthResponse> refresh(@RequestParam String refreshToken) throws Exception {
+        JwtAuthResponse response = authService.refreshToken(refreshToken);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        // TODO: Implement token blacklisting/logout
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Get current user info endpoint
+     */
+    @GetMapping("/me")
+    public ResponseEntity<UserInfoResponse> me(@RequestHeader("Authorization") String authorization) {
+        try {
+            String token = extractToken(authorization);
+            if (token == null || !tokenUtil.validateToken(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            String email = tokenUtil.extractUsername(token);
+            UserDTO userDTO = userService.getUserByEmailId(email);
+
+            UserInfoResponse response = new UserInfoResponse();
+            response.setUserId(userDTO.getId());
+            response.setEmail(userDTO.getEmail());
+            response.setUsername(userDTO.getEmail());
+            response.setEnabled(userDTO.getEnabled());
+            response.setRoles(userDTO.getRoles().stream()
+                    .map(RoleDTO::getName)
+                    .collect(Collectors.toList()));
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+    }
+
+    /**
+     * Token validation endpoint for API Gateway
+     * Validates token and returns token information
+     */
+    @PostMapping("/validate")
+    public ResponseEntity<TokenValidationResponse> validateToken(@RequestBody TokenValidationRequest request) {
+        try {
+            String token = request.getToken();
+
+            if (token == null || token.isEmpty()) {
+                return ResponseEntity.ok(new TokenValidationResponse(false, "Token is required"));
+            }
+
+            boolean isValid = tokenUtil.validateToken(token);
+
+            if (!isValid) {
+                return ResponseEntity.ok(new TokenValidationResponse(false, "Invalid or expired token"));
+            }
+
+            TokenInfo tokenInfo = tokenUtil.getTokenInfo(token);
+
+            TokenValidationResponse response = new TokenValidationResponse(true, "Token is valid");
+            response.setSubject(tokenInfo.getSubject());
+            response.setUserId(tokenInfo.getUserId());
+            response.setEmail(tokenInfo.getEmail());
+            response.setRoles(tokenInfo.getRoles());
+            response.setEnabled(tokenInfo.getEnabled());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.ok(new TokenValidationResponse(false, "Error validating token: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Token introspection endpoint (OAuth2 compatible)
+     * Returns detailed token information
+     */
+    @PostMapping("/introspect")
+    public ResponseEntity<Object> introspectToken(@RequestParam String token) {
+        try {
+            if (token == null || token.isEmpty()) {
+                return ResponseEntity.ok(Map.of("active", false));
+            }
+
+            boolean isValid = tokenUtil.validateToken(token);
+
+            if (!isValid) {
+                return ResponseEntity.ok(Map.of("active", false));
+            }
+
+            TokenInfo tokenInfo = tokenUtil.getTokenInfo(token);
+
+            return ResponseEntity.ok(Map.of(
+                    "active", true,
+                    "sub", tokenInfo.getSubject(),
+                    "userId", tokenInfo.getUserId() != null ? tokenInfo.getUserId() : "",
+                    "email", tokenInfo.getEmail() != null ? tokenInfo.getEmail() : "",
+                    "roles", tokenInfo.getRoles() != null ? tokenInfo.getRoles() : List.of(),
+                    "enabled", tokenInfo.getEnabled() != null ? tokenInfo.getEnabled() : false,
+                    "type", tokenInfo.getType() != null ? tokenInfo.getType() : "",
+                    "iss", tokenInfo.getIssuer() != null ? tokenInfo.getIssuer() : "",
+                    "iat", tokenInfo.getIssuedAt() != null ? tokenInfo.getIssuedAt().getTime() / 1000 : 0,
+                    "exp", tokenInfo.getExpiration() != null ? tokenInfo.getExpiration().getTime() / 1000 : 0
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("active", false, "error", e.getMessage()));
+        }
+    }
+
+    /**
+     * User info endpoint for API Gateway
+     * Returns user information from token
+     */
+    @PostMapping("/userinfo")
+    public ResponseEntity<UserInfoResponse> getUserInfo(@RequestParam String token) {
+        try {
+            if (token == null || !tokenUtil.validateToken(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            String email = tokenUtil.extractUsername(token);
+            UserDTO userDTO = userService.getUserByEmailId(email);
+
+            UserInfoResponse response = new UserInfoResponse();
+            response.setUserId(userDTO.getId());
+            response.setEmail(userDTO.getEmail());
+            response.setUsername(userDTO.getEmail());
+            response.setEnabled(userDTO.getEnabled());
+            response.setRoles(userDTO.getRoles().stream()
+                    .map(RoleDTO::getName)
+                    .collect(Collectors.toList()));
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+    }
+
+    /**
+     * Authorization endpoint for API Gateway
+     * Checks if user has required roles/permissions
+     */
+    @PostMapping("/authorize")
+    public ResponseEntity<AuthorizationResponse> authorize(@RequestBody AuthorizationRequest request) {
+        try {
+            String token = request.getToken();
+
+            if (token == null || !tokenUtil.validateToken(token)) {
+                return ResponseEntity.ok(new AuthorizationResponse(false, "Invalid token", "AUTHENTICATION_FAILED"));
+            }
+
+            List<String> userRoles = tokenUtil.extractRoles(token);
+
+            // Check required roles
+            if (request.getRequiredRoles() != null && !request.getRequiredRoles().isEmpty()) {
+                boolean hasRequiredRole = request.getRequiredRoles().stream()
+                        .anyMatch(userRoles::contains);
+
+                if (!hasRequiredRole) {
+                    return ResponseEntity.ok(new AuthorizationResponse(
+                            false,
+                            "User does not have required roles",
+                            "INSUFFICIENT_ROLES"
+                    ));
+                }
+            }
+
+            // Check if user is enabled
+            TokenInfo tokenInfo = tokenUtil.getTokenInfo(token);
+            if (tokenInfo.getEnabled() == null || !tokenInfo.getEnabled()) {
+                return ResponseEntity.ok(new AuthorizationResponse(
+                        false,
+                        "User account is disabled",
+                        "ACCOUNT_DISABLED"
+                ));
+            }
+
+            return ResponseEntity.ok(new AuthorizationResponse(true, "User is authorized"));
+        } catch (Exception e) {
+            return ResponseEntity.ok(new AuthorizationResponse(false, "Authorization failed: " + e.getMessage(), "ERROR"));
+        }
+    }
+
+    /**
+     * Check role endpoint - quick role check for API Gateway
+     */
+    @PostMapping("/check-role")
+    public ResponseEntity<Boolean> checkRole(@RequestParam String token, @RequestParam String role) {
+        try {
+            if (token == null || !tokenUtil.validateToken(token)) {
+                return ResponseEntity.ok(false);
+            }
+
+            List<String> userRoles = tokenUtil.extractRoles(token);
+            boolean hasRole = userRoles.contains(role);
+
+            return ResponseEntity.ok(hasRole);
+        } catch (Exception e) {
+            return ResponseEntity.ok(false);
+        }
+    }
+
+    /**
+     * Service-to-service authentication endpoint
+     * Validates service tokens (for inter-service communication)
+     */
+    @PostMapping("/service/validate")
+    public ResponseEntity<Map<String, Object>> validateServiceToken(@RequestParam String serviceToken) {
+        try {
+            // Validate service token (you may need to implement service token validation separately)
+            // For now, this is a placeholder that validates as a regular token
+            boolean isValid = tokenUtil.validateToken(serviceToken);
+
+            if (!isValid) {
+                return ResponseEntity.ok(Map.of("valid", false));
+            }
+
+            TokenInfo tokenInfo = tokenUtil.getTokenInfo(serviceToken);
+
+            return ResponseEntity.ok(Map.of(
+                    "valid", true,
+                    "serviceId", tokenInfo.getSubject(),
+                    "roles", tokenInfo.getRoles()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("valid", false, "error", e.getMessage()));
+        }
+    }
+
+    private String extractToken(String authorization) {
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            return authorization.substring(7);
+        }
+        return null;
+    }
+}

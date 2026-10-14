@@ -1,0 +1,10 @@
+package com.credintel.auth_service.modules.services;
+
+import com.credintel.auth_service.modules.dto.JwtAuthResponse;
+import com.credintel.auth_service.modules.dto.LoginRequest;
+
+public interface AuthService {
+
+    JwtAuthResponse validateLoginRequest(LoginRequest loginRequest) throws Exception;
+    JwtAuthResponse refreshToken(String refreshToken) throws Exception;
+}
