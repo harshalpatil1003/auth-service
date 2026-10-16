@@ -87,22 +87,16 @@
 			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
 		</dependency>
 
+		<!-- health probes on the management port -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
 
 		<dependency>
 			<groupId>com.credintel</groupId>
 			<artifactId>credintel-jwt</artifactId>
-			<version>1.0.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.credintel</groupId>
-			<artifactId>credintel-security-starter</artifactId>
-			<version>1.0.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.credintel</groupId>
-			<artifactId>credintel-crypto</artifactId>
 			<version>1.0.0</version>
 		</dependency>
 

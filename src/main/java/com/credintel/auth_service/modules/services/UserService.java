@@ -1,16 +1,16 @@
 package com.credintel.auth_service.modules.services;
 
+import com.credintel.auth_service.config.exception.AuthException;
 import com.credintel.auth_service.modules.bean.User;
 import com.credintel.auth_service.modules.constants.UserStatus;
 import com.credintel.auth_service.modules.dao.UserRepository;
 import com.credintel.auth_service.modules.dto.CreateUserRequest;
-import jakarta.transaction.Transactional;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.UUID;
 
 @Service
@@ -28,17 +28,13 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public User createUser(CreateUserRequest request) throws Exception {
+    public User createUser(CreateUserRequest request) {
 
         String email = request.getEmail().trim().toLowerCase();
 
+        PasswordService.check(request.getPassword(), email);
         if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new Exception(
-                    "User already exists with email: " + email
-            );
-            /*throw new DuplicateEmailException(
-                    "User already exists with email: " + email
-            );*/
+            throw new AuthException(HttpStatus.CONFLICT, "User already exists");
         }
 
         User user = new User();

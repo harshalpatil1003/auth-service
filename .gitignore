@@ -1,2 +1,5 @@
 /.idea/
 /target/
+
+# Local secrets: DB login and the development JWT key pair (see application.properties)
+/config/

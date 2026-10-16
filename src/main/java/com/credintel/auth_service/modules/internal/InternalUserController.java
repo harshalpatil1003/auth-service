@@ -1,5 +1,6 @@
 package com.credintel.auth_service.modules.internal;
 
+
 import com.credintel.auth_service.modules.bean.User;
 import com.credintel.auth_service.modules.dao.UserRepository;
 import com.credintel.auth_service.modules.dto.CreateUserRequest;
@@ -47,12 +48,9 @@ public class InternalUserController {
     @PostMapping
     public ResponseEntity<UserResponse> createUser(
             @RequestHeader(value = InternalApiGuard.HEADER, required = false) String token,
-            @Valid @RequestBody CreateUserRequest request) throws Exception {
+            @Valid @RequestBody CreateUserRequest request) {
 
         guard.check(token);
-        if (userRepository.existsByEmailIgnoreCase(request.getEmail().trim())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "User already exists");
-        }
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(UserResponse.from(userService.createUser(request)));

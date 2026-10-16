@@ -1,13 +1,9 @@
 package com.credintel.auth_service.modules.bean;
 
 import com.credintel.auth_service.modules.constants.UserStatus;
-import com.credintel.base.BaseEntity;
 import jakarta.persistence.*;
 
-import java.sql.Date;
 import java.time.LocalDateTime;
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -29,7 +25,7 @@ public class User{
     @Column( nullable = false, length = 320)
     private String email;
 
-    @Column( name = "password_hash", nullable = false )
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
@@ -41,6 +37,25 @@ public class User{
 
     @Column(name = "updated_at")
     private LocalDateTime updated_at;
+
+    /** Consecutive failed logins; reset on success or when a lock is applied. */
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts;
+
+    /** Logins are refused until this time after too many failures (null = not locked). */
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
+
+    @Column(name = "password_changed_at")
+    private LocalDateTime passwordChangedAt;
+
+    public LocalDateTime getPasswordChangedAt() {
+        return passwordChangedAt;
+    }
+
+    public void setPasswordChangedAt(LocalDateTime passwordChangedAt) {
+        this.passwordChangedAt = passwordChangedAt;
+    }
 
     public UserStatus getStatus() {
         return status;
@@ -88,5 +103,13 @@ public class User{
 
     public void setCreated_at(LocalDateTime created_at) {
         this.created_at = created_at;
+    }
+
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public LocalDateTime getLockedUntil() {
+        return lockedUntil;
     }
 }
