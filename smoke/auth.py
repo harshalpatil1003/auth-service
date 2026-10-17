@@ -181,11 +181,11 @@ def sso(next_path=None, tamper_cookie=False, cancel=False):
     """Runs the browser side: start → provider → callback. Returns the final Location."""
     s, h, _ = raw(BASE + "/auth/sso/oidc/start" + (f"?next={urllib.parse.quote(next_path)}" if next_path else ""))
     if s != 302: return f"start answered {s}"
-    cookie = http.cookies.SimpleCookie(h.get("Set-Cookie")); state_cookie = cookie["vendly_sso_state"].value
+    cookie = http.cookies.SimpleCookie(h.get("Set-Cookie")); state_cookie = cookie["credintel_sso_state"].value
     s, h, _ = raw(h["Location"])                      # the provider signs the test user in, sends back
     callback = h["Location"]
     if cancel: callback = callback.split("?")[0] + "?error=access_denied&state=x"
-    s, h, _ = raw(callback, headers={"Cookie": "vendly_sso_state=" + ("forged" if tamper_cookie else state_cookie)})
+    s, h, _ = raw(callback, headers={"Cookie": "credintel_sso_state=" + ("forged" if tamper_cookie else state_cookie)})
     return h.get("Location", f"callback answered {s}")
 def code_of(location):
     frag = urllib.parse.parse_qs(location.split("#", 1)[1]) if "#" in location else {}

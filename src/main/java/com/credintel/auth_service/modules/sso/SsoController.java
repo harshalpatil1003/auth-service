@@ -34,7 +34,7 @@ import java.util.Map;
 @RequestMapping("/auth/sso")
 public class SsoController {
 
-    private static final String COOKIE = "vendly_sso_state";
+    private static final String COOKIE = "credintel_sso_state";
     private static final String COOKIE_PATH = "/auth-service/api/v1/auth/sso";
 
     public record ExchangeRequest(@NotBlank String code) {

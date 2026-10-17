@@ -1,6 +1,6 @@
 # auth-service
 
-Accounts, passwords and JWTs for the Vendly CRM. Users sign in here; every other service checks
+Accounts, passwords and JWTs for the CredIntel CRM. Users sign in here; every other service checks
 the RS256 access tokens it issues with the public key.
 
 ## API (`/auth-service/api/v1`, through the gateway)
